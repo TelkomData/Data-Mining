@@ -49,7 +49,7 @@ def g_barplot(df, cat, outlier_thres = 0.05): #, df_name=''):
     plt.tight_layout()
     plt.savefig(cht_path)
     http_cht_path = http_path + '/' + cat + '.png'
-    plt.show()
+    #plt.show()
     plt.clf()
     return cht, http_cht_path
 
@@ -66,7 +66,7 @@ def g_histogram(df, con, buckets=100, _min=-250, _max=250, kde=True):
     plt.tight_layout()
     plt.savefig(cht_path)
     http_cht_path = http_path + '/' + con + '.png'
-    plt.show()
+    #plt.show()
     plt.clf()
     return cht, http_cht_path
 
@@ -82,7 +82,7 @@ def g_scatter(df, con1, con2):
     plt.tight_layout()
     plt.savefig(cht_path)
     http_cht_path = http_path + '/' + con1 + '_vs_' + con2 + '.png'
-    plt.show()
+    #plt.show()
     plt.clf()
     return cht, http_cht_path
 
@@ -101,7 +101,7 @@ def g_kde(df, cat, con, _min=-250, _max=250):
     plt.tight_layout()
     plt.savefig(cht_path)
     http_cht_path = http_path + '/' + cat + '_vs_' + con + '.png'
-    plt.show()
+    #plt.show()
     plt.clf()
     return cht, http_cht_path
 
@@ -124,7 +124,7 @@ def g_chi2(df, cat1, cat2):
     plt.tight_layout()
     plt.savefig(cht_path)
     http_cht_path = http_path + '/' + cat1 + '_vs_' + cat2 + '.png'
-    plt.show()
+    #plt.show()
     plt.clf()
     return cht, http_cht_path
 
@@ -155,7 +155,7 @@ def create_table(sc, sqlContext, table, df, size_limit = 20):
         col_graphs = ['graph_'+str(s) for s in list(set(df.columns)-set(c.split()))]
         var_cols.extend(col_graphs)
         
-        print("Producing graphs" + str(col_graphs))
+        #print("Producing graphs" + str(col_graphs))
        
         cols_complete = []
         cols_complete.append(c)
@@ -184,6 +184,8 @@ def create_table(sc, sqlContext, table, df, size_limit = 20):
         
         uniq = df.select(c).distinct().count()
         
+        print(uniq)
+        
         print 'Unique Count Done'
         
         null = df.where(F.col(c).isNull()).count()
@@ -206,45 +208,51 @@ def create_table(sc, sqlContext, table, df, size_limit = 20):
         
         print('Single Graph Done')
         
-        if not (uniq > size_limit) & (col_type == 'string'): 
+        if not (uniq > size_limit) & (col_type in ['categorical','date']): 
+            
             for j in list(set(rem_cols)-set(no_plot_cols)):
-                
-                print(c,j)
                 
                 uniq_2 = df.select(j).distinct().count()
                 col_2_type = df.select(j).dtypes[0][1]
                 col_2_type = type_dict[col_2_type]
+                
+                if not (uniq_2 > size_limit) & (col_2_type in ['categorical', 'date']):
+                    
+                    print(c,j)  
+                    
+                    if uniq_2 == 2:
+                        col_2_type = 'indicator'
 
-                if uniq_2 == 2:
-                    col_2_type = 'indicator'
+                    if (col_type == 'categorical') & (col_2_type == 'categorical'):
+                        if uniq < size_limit and uniq_2 < size_limit:
+                            col_g.append(g_chi2(df, c, j)[0])
+                            col_g_paths.append(g_chi2(df, c, j)[1])
+                        elif uniq < size_limit and uniq_2 > size_limit:
+                            no_plot_cols.append(j)
+                        elif uniq > size_limit and uniq_2 < size_limit:
+                            no_plot_cols.append(c)
+                        else:
+                            no_plot_cols.extend([c,j])    
 
-                if (col_type == 'categorical') & (col_2_type == 'categorical'):
-                    if uniq < size_limit and uniq_2 < size_limit:
-                        col_g.append(g_chi2(df, c, j)[0])
-                        col_g_paths.append(g_chi2(df, c, j)[1])
-                    elif uniq < size_limit and uniq_2 > size_limit:
-                        no_plot_cols.append(j)
-                    elif uniq > size_limit and uniq_2 < size_limit:
-                        no_plot_cols.append(c)
-                    else:
-                        no_plot_cols.extend([c,j])    
-                            
-                if (col_type == 'categorical') & (col_2_type == 'numeric'):
-                    if uniq < size_limit:
-                        col_g.append(g_kde(df, c, j)[0])
-                        col_g_paths.append(g_kde(df, c, j)[1])
-                    else:
-                        no_plot_cols.append(c)
-                if (col_type == 'numeric') & (col_2_type == 'categorical'):
-                    if uniq_2 < size_limit:
-                        col_g.append(g_kde(df, j, c)[0])
-                        col_g_paths.append(g_kde(df, j, c)[1])
-                    else:
-                        no_plot_cols.append(j)    
+                    if (col_type == 'categorical') & (col_2_type == 'numeric'):
+                        if uniq < size_limit:
+                            col_g.append(g_kde(df, c, j)[0])
+                            col_g_paths.append(g_kde(df, c, j)[1])
+                        else:
+                            no_plot_cols.append(c)
+                    if (col_type == 'numeric') & (col_2_type == 'categorical'):
+                        if uniq_2 < size_limit:
+                            col_g.append(g_kde(df, j, c)[0])
+                            col_g_paths.append(g_kde(df, j, c)[1])
+                        else:
+                            no_plot_cols.append(j)    
 
-                if (col_type == 'numeric') & (col_2_type == 'numeric'):
-                        col_g.append(g_scatter(df, c, j)[0])
-                        col_g_paths.append(g_scatter(df, c, j)[1])
+                    if (col_type == 'numeric') & (col_2_type == 'numeric'):
+                            col_g.append(g_scatter(df, c, j)[0])
+                            col_g_paths.append(g_scatter(df, c, j)[1])
+                else:
+                    pass
+                    
         else:
             pass                       
                     
@@ -278,5 +286,88 @@ def create_table(sc, sqlContext, table, df, size_limit = 20):
         
     rdd = sc.parallelize(output_final) 
     sqlContext.createDataFrame(rdd, schema=schema).write.mode('overwrite').saveAsTable('{:s}.{:s}'.format('datamining', table),format='parquet')
+    
+    df.unpersist()
+    
+    
+    
+    
+    
+def create_graphs(sc, sqlContext, table, df):
+    
+    df.persist()
+    no_plot_cols = []
+    output = []
+
+    type_dict = {'float':'numeric','long':'numeric', 'integer':'numeric', 
+                 'smallint':'numeric', 'int':'numeric', 'bigint':'numeric', 'string':'categorical', 
+                 'timestamp':'date', 'binary':'indicator','decimal(9,2)':'numeric'}
+   
+    
+    for c in df.columns:
+        
+        #print("Producing graphs" + str(col_graphs))
+        col_graphs = ['graph_'+str(s) for s in list(set(df.columns)-set(c.split()))]
+        cols_complete = []
+        cols_complete.append(c)
+        rem_cols = list(set(df.columns) - set(cols_complete))
+        
+        #Initialize columns
+
+        g = 0
+        g_path = 0
+        col_g = []
+        col_g_paths = []
+        col_g.extend(np.zeros(len(col_graphs)))
+        
+        print 'Getting {:s} data'.format(c)
+        
+        col_type = df.select(c).dtypes[0][1]
+        col_type = type_dict[col_type]
+        
+        print(col_type)
+    
+        print 'Type Done'
+        
+        if col_type == 'categorical':
+            g, g_path = g_barplot(df, c) 
+        
+        if col_type == 'numeric':  
+            g, g_path = g_histogram(df, c)
+        
+        print('Single Graph Done')
+        
+       
+            
+        for j in list(set(rem_cols)):
+                
+           
+            col_2_type = df.select(j).dtypes[0][1]
+            col_2_type = type_dict[col_2_type]
+
+               
+                    
+            print(c,j)  
+                    
+           
+
+            if (col_type == 'categorical') & (col_2_type == 'categorical'):
+                col_g.append(g_chi2(df, c, j)[0])
+                col_g_paths.append(g_chi2(df, c, j)[1])
+                       
+
+            elif (col_type == 'categorical') & (col_2_type == 'numeric'):
+                col_g.append(g_kde(df, c, j)[0])
+                col_g_paths.append(g_kde(df, c, j)[1])
+                        
+            elif (col_type == 'numeric') & (col_2_type == 'categorical'):    
+                col_g.append(g_kde(df, j, c)[0])
+                col_g_paths.append(g_kde(df, j, c)[1])
+                        
+            elif (col_type == 'numeric') & (col_2_type == 'numeric'):
+                col_g.append(g_scatter(df, c, j)[0])
+                col_g_paths.append(g_scatter(df, c, j)[1])
+            else:
+                pass
     
     df.unpersist()
