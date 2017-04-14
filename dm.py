@@ -302,8 +302,7 @@ def create_graphs(sc, sqlContext, table, df):
     type_dict = {'float':'numeric','long':'numeric', 'integer':'numeric', 
                  'smallint':'numeric', 'int':'numeric', 'bigint':'numeric', 'string':'categorical', 
                  'timestamp':'date', 'binary':'indicator','decimal(9,2)':'numeric'}
-   
-    
+  
     for c in df.columns:
         
         #print("Producing graphs" + str(col_graphs))
@@ -336,25 +335,17 @@ def create_graphs(sc, sqlContext, table, df):
             g, g_path = g_histogram(df, c)
         
         print('Single Graph Done')
-        
-       
             
         for j in list(set(rem_cols)):
                 
-           
             col_2_type = df.select(j).dtypes[0][1]
-            col_2_type = type_dict[col_2_type]
-
-               
+            col_2_type = type_dict[col_2_type] 
                     
             print(c,j)  
-                    
            
-
             if (col_type == 'categorical') & (col_2_type == 'categorical'):
                 col_g.append(g_chi2(df, c, j)[0])
                 col_g_paths.append(g_chi2(df, c, j)[1])
-                       
 
             elif (col_type == 'categorical') & (col_2_type == 'numeric'):
                 col_g.append(g_kde(df, c, j)[0])
