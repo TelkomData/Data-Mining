@@ -177,6 +177,8 @@ def create_table(sc, sqlContext, table, df, size_limit = 20):
         
         col_type = df.select(c).dtypes[0][1]
         col_type = type_dict[col_type]
+        
+        print(col_type)
     
         print 'Type Done'
         
@@ -191,7 +193,7 @@ def create_table(sc, sqlContext, table, df, size_limit = 20):
         if uniq == 2:
             col_type = 'indicator'
         
-        if (uniq < size_limit) & (col_type == 'string'):
+        if (uniq < size_limit) & (col_type == 'categorical'):
             g, g_path = g_barplot(df, c) 
         
         if col_type == 'numeric':   
